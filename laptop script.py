@@ -1,10 +1,27 @@
 # WARNING DONT RUN ON PICO
 import serial
 import serial.tools.list_ports
+import T1D_hack
+import asyncio
 
 for p in serial.tools.list_ports.comports():
     print(p.device, p.description, p.hwid)
 portnum = input("Enter port number: ")
 ser = serial.Serial(f"COM{portnum}", 115200)  # data port
-ser.write(b"hello\n")
-print(ser.readline())
+
+
+def send_data_to_pico(data: bytes):
+    ser.write(data)
+
+
+async def main():
+    # repeatedly read from the gamepad and send the bytes to the pico
+    while True:
+        state = await T1D_hack.gamepad_state_stream().__anext__()
+        if state is not None:
+            send_data_to_pico(state.to_bytes())
+            send_data_to_pico(b"\n")  # newline as a separator
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
