@@ -1,5 +1,4 @@
 from math import copysign
-from typing import Optional
 
 DPAD_LOOKUP = {
     0: (False, False, False, False),
@@ -108,8 +107,17 @@ class GamepadState:
             raise TypeError(f"Unexpected keyword arguments: {unknown}")
 
     def __repr__(self) -> str:
-        parts = ", ".join(f"{name}={{0.{name}!r}}" for name in self._FIELDS)
-        return f"GamepadState({parts})".format(self)
+        def fmt(val):
+            if isinstance(val, float):
+                return f"{val: 6.3f}"
+            elif isinstance(val, int):
+                return f"{val:5d}"
+            else:
+                return repr(val)
+        parts = ", ".join(
+            f"{name}={fmt(getattr(self, name))}" for name in self._FIELDS
+        )
+        return f"GamepadState({parts})"
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, GamepadState):
@@ -171,11 +179,11 @@ class GamepadState:
         return bytes(raw)
 
     @staticmethod
-    def from_bytes(raw: bytes) -> Optional["GamepadState"]:
+    def from_bytes(raw: bytes):
         return parse_state(raw)
 
 
-def parse_state(raw: bytes) -> Optional[GamepadState]:
+def parse_state(raw: bytes):
     if int(raw[7]) == 3:
         return None
 

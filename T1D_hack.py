@@ -2,7 +2,6 @@ import asyncio
 import bleak
 import vgamepad
 from vgamepad import XUSB_BUTTON
-from typing import AsyncGenerator, Optional
 from gamepad_state import *
 
 MAC_ADDRESS = "C6:86:A1:06:8B:7C"
@@ -27,7 +26,7 @@ button_map = {
 async def gamepad_state_stream(
     mac_address: str = MAC_ADDRESS,
     char_uuid: str = CHAR_UUID,
-) -> AsyncGenerator[Optional[GamepadState], None]:
+):
     while True:
         try:
             async with bleak.BleakClient(mac_address) as t1d:
@@ -36,11 +35,13 @@ async def gamepad_state_stream(
                     state = parse_state(raw)
                     if state is None:
                         yield None
-                        continue
                     yield state
         except OSError:
             print("bluetooth not on")
             yield None
+        except KeyboardInterrupt:
+            print("Exiting on Ctrl+C")
+            break
 
 
 async def run_vgamepad(
