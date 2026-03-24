@@ -114,9 +114,8 @@ class GamepadState:
                 return f"{val:5d}"
             else:
                 return repr(val)
-        parts = ", ".join(
-            f"{name}={fmt(getattr(self, name))}" for name in self._FIELDS
-        )
+
+        parts = ", ".join(f"{name}={fmt(getattr(self, name))}" for name in self._FIELDS)
         return f"GamepadState({parts})"
 
     def __eq__(self, other: object) -> bool:

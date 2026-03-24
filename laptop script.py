@@ -9,8 +9,10 @@ for p in serial.tools.list_ports.comports():
 portnum = input("Enter port number: ")
 ser = serial.Serial(f"COM{portnum}", 115200)  # data port
 
+
 def send_data_to_pico(data):
     ser.write(data)
+
 
 async def main():
     # repeatedly read from the gamepad and send the bytes to the pico as hex strings, separated by newlines
