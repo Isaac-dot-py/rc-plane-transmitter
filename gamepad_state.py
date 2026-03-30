@@ -13,15 +13,6 @@ DPAD_LOOKUP = {
 }
 
 
-def inputsquare(scalar: float) -> float:
-    return copysign(abs(scalar) ** 1.5, scalar)
-
-
-def output_square(scalar: float) -> float:
-    """Inverse of inputsquare for packing to raw axis values."""
-    return copysign(abs(scalar) ** (2 / 3), scalar)
-
-
 class GamepadState:
     L1: bool = False
     L2: int = 0
@@ -134,10 +125,10 @@ class GamepadState:
         def clamp_axis(val: float) -> float:
             return max(-1.0, min(1.0, val))
 
-        LX = scale_axis(output_square(clamp_axis(self.LX)))
-        LY = scale_axis(-output_square(clamp_axis(self.LY)))
-        RX = scale_axis(output_square(clamp_axis(self.RX)))
-        RY = scale_axis(-output_square(clamp_axis(self.RY)))
+        LX = scale_axis(clamp_axis(self.LX))
+        LY = scale_axis(-clamp_axis(self.LY))
+        RX = scale_axis(clamp_axis(self.RX))
+        RY = scale_axis(-clamp_axis(self.RY))
 
         # Pack axes
         raw[2] = (LX >> 2) & 0xFF
@@ -207,10 +198,10 @@ def parse_state(raw: bytes):
     RX = int(((raw[4] & 0xF) << 6) | (raw[5] >> 2))
     RY = int(((raw[5] & 0x3) << 8) + (raw[6]))
 
-    LX = inputsquare((LX - 512) / 512)
-    LY = inputsquare((LY - 512) / -512)
-    RX = inputsquare((RX - 512) / 512)
-    RY = inputsquare((RY - 512) / -512)
+    LX = (LX - 512) / 512
+    LY = (LY - 512) / -512
+    RX = (RX - 512) / 512
+    RY = (RY - 512) / -512
 
     return GamepadState(
         L1=L1,
