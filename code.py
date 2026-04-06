@@ -4,6 +4,9 @@ import pwmio
 import board
 from adafruit_motor import servo
 
+MIN_THROTTLE = 58
+MAX_THROTTLE = 180
+
 # Use the data port (not REPL)
 cdc = usb_cdc.data
 
@@ -12,10 +15,12 @@ pwm1 = pwmio.PWMOut(board.GP0, duty_cycle=2**15, frequency=50)
 servo1 = servo.Servo(pwm1)
 pwm2 = pwmio.PWMOut(board.GP1, duty_cycle=2**15, frequency=50)
 servo2 = servo.Servo(pwm2)
-pwm3 = pwmio.PWMOut(board.GP2, duty_cycle=2**15, frequency=50)
-servo3 = servo.Servo(pwm3)
+throttle_pwm = pwmio.PWMOut(board.GP2, duty_cycle=2**15, frequency=50)
+throttle_servo = servo.Servo(throttle_pwm)
 pwm4 = pwmio.PWMOut(board.GP3, duty_cycle=2**15, frequency=50)
 servo4 = servo.Servo(pwm4)
+
+armed = False
 
 while True:
     line = cdc.readline()
@@ -26,17 +31,25 @@ while True:
             # Create a GamepadState from the bytes
             state = GamepadState.from_bytes(data_bytes)
             if state:
-                # Map right_y (-1 to 1) to angle (0 to 180)
+                # C2 is arming button, arm when C2 is pressed and throttle is at minimum
+                if state.C2 and not armed and state.LY < -0.95:
+                    armed = True
+                # Disarm when C1 is pressed
+                if state.C1 and armed:
+                    armed = False
+
+                # Map input (-1 to 1) to angle (0 to 180)
                 angle1 = int(((state.RY + 1) / 2) * 180)
                 servo1.angle = angle1
                 angle2 = int(((state.RX + 1) / 2) * 180)
                 servo2.angle = angle2
-                angle3 = int(((state.LY + 1) / 2) * 180)
-                servo3.angle = angle3
                 angle4 = int(((state.LX + 1) / 2) * 180)
                 servo4.angle = angle4
+
+                throttle_angle = int(((state.LY + 1) / 2) * (MAX_THROTTLE - MIN_THROTTLE) + MIN_THROTTLE) if armed else 20
+                throttle_servo.angle = throttle_angle
                 print(
-                    f"Right Y: {state.RY:.2f}, Angle: {angle1}, Right X: {state.RX:.2f}, Angle: {angle2}, Left Y: {state.LY:.2f}, Angle: {angle3}, Left X: {state.LX:.2f}, Angle: {angle4}",
+                    f"Right Y: {state.RY:.2f}, Angle: {angle1}, Right X: {state.RX:.2f}, Angle: {angle2}, Left Y: {state.LY:.2f}, Throttle Angle: {throttle_angle}, Left X: {state.LX:.2f}, Angle: {angle4}",
                     end="\r",
                 )
             else:
