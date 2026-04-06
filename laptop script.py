@@ -20,7 +20,6 @@ async def main():
         if state is not None:
             send_data_to_pico(state.to_bytes().hex().encode())
             send_data_to_pico(b"\n")  # newline as a separator
-            print(state.to_bytes().hex())
 
 
 if __name__ == "__main__":
