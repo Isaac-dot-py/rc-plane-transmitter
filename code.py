@@ -46,10 +46,17 @@ while True:
                 angle4 = int(((state.LX + 1) / 2) * 180)
                 servo4.angle = angle4
 
-                throttle_angle = int(((state.LY + 1) / 2) * (MAX_THROTTLE - MIN_THROTTLE) + MIN_THROTTLE) if armed else 20
+                throttle_angle = (
+                    int(
+                        ((state.LY + 1) / 2) * (MAX_THROTTLE - MIN_THROTTLE)
+                        + MIN_THROTTLE
+                    )
+                    if armed
+                    else 20
+                )
                 throttle_servo.angle = throttle_angle
                 print(
-                    f"Right Y: {state.RY:.2f}, Angle: {angle1}, Right X: {state.RX:.2f}, Angle: {angle2}, Left Y: {state.LY:.2f}, Throttle Angle: {throttle_angle}, Left X: {state.LX:.2f}, Angle: {angle4}",
+                    f"Right Y: {round(state.RY, 2):<5}, Angle: {angle1:<3}, Right X: {round(state.RX, 2):<5}, Angle: {angle2:<3}, Left Y: {round(state.LY, 2):<5}, Throttle Angle: {throttle_angle:<3}, Left X: {round(state.LX, 2):<5}, Angle: {angle4:<3}",
                     end="\r",
                 )
             else:
