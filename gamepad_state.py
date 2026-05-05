@@ -12,7 +12,6 @@ DPAD_LOOKUP = {
     8: (True, False, True, False),
 }
 
-
 class GamepadState:
     L1: bool = False
     L2: int = 0
@@ -223,4 +222,30 @@ def parse_state(raw: bytes):
         LY=LY,
         RX=RX,
         RY=RY,
+    )
+
+
+def random_state():
+    import random
+
+    return GamepadState(
+        L1=random.choice([True, False]),
+        L2=random.randint(0, 255),
+        R1=random.choice([True, False]),
+        R2=random.randint(0, 255),
+        X=random.choice([True, False]),
+        Y=random.choice([True, False]),
+        A=random.choice([True, False]),
+        B=random.choice([True, False]),
+        C1=random.choice([True, False]),
+        C2=random.choice([True, False]),
+        MENU=random.choice([True, False]),
+        down=random.choice([True, False]),
+        up=random.choice([True, False]),
+        left=random.choice([True, False]),
+        right=random.choice([True, False]),
+        LX=copysign(random.random(), random.choice([-1, 1])),
+        LY=copysign(random.random(), random.choice([-1, 1])),
+        RX=copysign(random.random(), random.choice([-1, 1])),
+        RY=copysign(random.random(), random.choice([-1, 1])),
     )
