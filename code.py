@@ -6,6 +6,7 @@ import digitalio
 import adafruit_rfm69
 import busio
 import gamepad_state
+from time import sleep
 
 
 CS_PIN = board.GP0
@@ -27,7 +28,7 @@ radio_spi = busio.SPI(clock=CLOCK_PIN, MOSI=MOSI_PIN, MISO=MISO_PIN)
 # Initialise RFM69 radio
 rfm69 = adafruit_rfm69.RFM69(radio_spi, radio_cs, radio_reset, RADIO_FREQ_MHZ)
 
-   
+
 while True:
     if TRANSMIT_RANDOM_GAMEPAD_STATE:
         random_state = gamepad_state.random_state()
@@ -35,6 +36,7 @@ while True:
             rfm69.send(random_state.to_bytes().hex().encode())
         except Exception as e:
             print(f"Error sending random state: {e}")
+        sleep(0.03)
         continue
     try:
         line = cdc.readline()
@@ -44,6 +46,7 @@ while True:
                 gamepadstate_in_bytes = bytes.fromhex(line.decode().strip())
                 try:
                     rfm69.send(gamepadstate_in_bytes)
+                    print(f"Sent data: {gamepadstate_in_bytes.hex()}", end="\r")
                 except Exception as e:
                     print(f"Error sending data: {e}")
             except Exception as e:
