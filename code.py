@@ -1,12 +1,18 @@
+import watchdog
+import microcontroller
+# dog = microcontroller.watchdog
+# dog.timeout = 8 # TODO
+# dog.mode = watchdog.WatchDogMode.RESET
+
 import board
 import digitalio
 import adafruit_rfm69
+import array
 import usb.core
 import usb_host
 import busio
 import adafruit_usb_host_descriptors
-import gamepad_state
-from time import sleep
+from time import sleep, monotonic
 
 CLOCK_PIN = board.GP2
 MISO_PIN = board.GP4
@@ -28,7 +34,7 @@ rfm69 = adafruit_rfm69.RFM69(radio_spi, radio_cs, radio_reset, RADIO_FREQ_MHZ)
 
 joystick_device = None
 joystick_endpoint = None
-report_length = 64  # generous buffer; trimmed after we see real reports
+report_length = 7
 
 print("Waiting for USB device...")
 
@@ -53,30 +59,21 @@ try:
 except usb.core.USBError:
     print("usberror")
 
-buf = bytearray(report_length)
-last = None
+buf = array.array("B", [0] * report_length)
 
-# Byte offsets for a Logitech Extreme 3D Pro's 7-byte HID report.
-# If your raw hex dump doesn't line up with this (e.g. everything shifted
-# by one byte), your transport is prepending a Report ID byte -- adjust
-# OFFSET below to 1 and re-check.
-OFFSET = 0
 
 HAT_TO_DEGREES = (0, 45, 90, 135, 180, 225, 270, 315, -1)  # 8=centered -> -1
-
-
 def parse_report(data):
-    d = data[OFFSET:]
-    if len(d) < 7:
+    if len(data) < 7:
         return None
 
-    x = d[0] | ((d[1] & 0x03) << 8)  # 0..1023
-    y = (d[1] >> 2) | ((d[2] & 0x0F) << 6)  # 0..1023
-    hat_nibble = d[2] >> 4  # 0..8 (8 = centered)
-    twist = d[3]  # 0..255
-    buttons_a = d[4]
-    slider = d[5]  # 0..255
-    buttons_b = d[6]
+    x = data[0] | ((data[1] & 0x03) << 8)  # 0..1023
+    y = (data[1] >> 2) | ((data[2] & 0x0F) << 6)  # 0..1023
+    hat_nibble = data[2] >> 4  # 0..8 (8 = centered)
+    twist = data[3]  # 0..255
+    buttons_a = data[4]
+    slider = data[5]  # 0..255
+    buttons_b = data[6]
 
     axes = [x, y, twist, slider]  # index 0=X, 1=Y, 2=twist(Z), 3=slider/throttle
 
@@ -87,29 +84,31 @@ def parse_report(data):
 
     return axes, buttons, pov
 
-
+errors_in_a_row = 0
 print("Reading reports -- move sticks / press buttons to see which bytes change.")
-
 while True:
     try:
-        count = joystick_device.read(joystick_endpoint, buf, timeout=50)
-        print("test")
+        count = joystick_device.read(joystick_endpoint, buf, timeout=500)
         data = bytes(buf[:count])
-        if data != last:
-            print(" ".join(f"{b:02x}" for b in data))
-            parsed = parse_report(data)
-            if parsed:
-                axes, buttons, pov = parsed
-                print("axes:", axes, "buttons:", buttons, "pov:", pov)
-            last = data
+        parsed = parse_report(data)
+        if parsed:
+            axes, buttons, pov = parsed
+            print(" ".join(f"{b:02x}" for b in data), "axes:", axes, "buttons:", buttons, "pov:", pov)
+        else:
+            print("Invalid report:", data)
+        try:
+            rfm69.send(data)
+            # print(f"Sent data: {data.hex()}", end="\r")
+            errors_in_a_row = 0
+        except Exception as e:
+            print(f"Error sending data: {e}")
+            errors_in_a_row += 1
+        # dog.feed()
     except usb.core.USBTimeoutError:
         print("USB timeout (no data received)")
+        errors_in_a_row += 1
     except usb.core.USBError as e:
         print("USB error (device unplugged?):", e)
-        sleep(1)
-    # try:
-    #     data = bytes.fromhex("01 02 03 04 05 06 07 08")  # Example data to send
-    #     rfm69.send(data)
-    #     print(f"Sent data: {data.hex()}", end="\r")
-    # except Exception as e:
-    #     print(f"Error sending data: {e}")
+        errors_in_a_row += 1
+    if errors_in_a_row > 500: # TODO
+        microcontroller.reset()
